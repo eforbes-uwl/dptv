@@ -1,0 +1,4 @@
+# Install Rust Compiler and Cargo:
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+# Build Program:
+cargo build --release

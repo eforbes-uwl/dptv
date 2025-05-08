@@ -1,0 +1,81 @@
+# Default Parameters File
+# This is compiled into the program and is used if no file is provided
+# Please feel free to copy this and modify it to your liking
+# 
+# Lines starting with a hash ('#') will be ignored
+# Start a group with a dash ('-') followed by the name of the flag in the gem5 trace (ex: system.cpu.rename)
+#   followed by a colon (':') followed by the name of the stage to attatch any outputted values to
+# Then enter one or more regexes on the following lines to capture any parameters outputted by gem5
+# For each entry in the gem5 trace, only regexes under the flag for that entry will be matched against
+# Use named capturing groups to capture parameters: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Regular_expressions/Named_capturing_group
+#
+# Usually a captured parameter will be saved to every stage of that type at the current cycle number. However if a capture
+#   group named "sn" (short for "sequence number") is present then that sequence group will define the cycle number to attatch
+#   this line's parameters to. In this case the type of stage at that location will not matter, and if one does not exist then a
+#   dummy stage will be added there.
+# Similarly, a capture group named "sn_all" will define the cycle position for all captures within a group.
+#
+# Additionally, if the capturing group name contains "PLUS" or "MINUS" followed immediately by an integer, then the tool will
+#   attempt to add or subtract that value from the parameter before storing it in the dptv trace.
+
+
+
+- system.cpu.fetch : fetch
+\[tid:\d*\] \[sn:(?<sn>\d*)\] Sending instruction to decode from fetch queue\. Fetch queue size: (?<FQ_Size>\d*).
+\[tid:\d*\] \[sn:(?<sn>\d*)\] Branch at PC 0x(?<PC>[a-fA-F0-9]+) predicted to be (?<Branch_Pred>.*)$
+\[tid:\d*\] \[sn:(?<sn>\d*)\] Branch at PC 0x[a-fA-F0-9]+ predicted to go to (?<Pred_Path>.*)$
+
+
+- system.cpu.branchPred : any
+\[tid:\d*, sn:(?<sn>\d*)\] Branch predictor predicted (?<Pred_Cond>\d*) for PC:[0-9a-z]* (?<Branch_Type>.*)$
+\[tid:\d*, sn:(?<sn>\d*)\] PC:[0-9a-z]* BTB:(?<Did_BTB_Hit>[a-zA-Z]*)$
+\[tid:\d*\] \[sn:(?<sn>\d*)\] Instr. \([0-9a-z]*=>[0-9a-z]*\).\(\d*=>\d*\) was a call, push return address (?<Pushed_To_RAS>\([0-9a-z]*=>[0-9a-z]*\).\(\d*=>\d*\)) onto the RAS
+\[tid:\d*\] \[sn:(?<sn>\d*)\] History entry added.(?<History_Entry_Added>) predHist.size\(\): (?<PredHist_Size>\d*)$
+\[tid:\d*\] \[squash sn:(?<sn>\d*)\] Incorrect: (?<Branch_Incorrect>.*)$
+\[tid:\d*, squash sn:\d*\] Removing history for sn:(?<sn>\d*), PC:[0-9a-z]*(?<Removing_This_History>)$
+\[tid:\d*, squash sn:(?<sn>\d*)\] Removing history for sn:(?<Removing_HistoryMINUS1>\d*), PC:[0-9a-z]*$
+\[tid:\d*\] \[squash sn:(?<sn>\d*)\] pred_hist.size\(\): (?<PredHist_Size>\d*)$
+\[tid:\d*\] \[squash sn:(?<sn>\d*)\] Mispredicted: (?<Branch_Mispred>[a-zA-Z]*), PC:[0-9a-z]*$
+\[tid:\d*\] BTB Update called for \[sn:(?<sn>\d*)\] PC (?<BTB_Update>[0-9a-z]* -> T: [0-9a-z]*)
+\[tid:\d*\] Committing branches until \[sn:6\]
+Commit branch: sn:(?<sn>\d*), PC:[0-9a-z]* (?<Branch_Commit>[a-zA-Z]*), pred:(?<Predicted>\d*), taken:(?<Taken>\d*), target:(?<Target>[0-9a-z]*)$
+\[tid:\d*\] \[commit sn:(?<sn>\d*)\] pred_hist.size\(\): (?<PredHist_Size>\d*)$
+
+
+# Most info for this stage can be obtained from the similarly named "decoder" entry, which has special handling in the converter
+- system.cpu.decode : decode
+
+
+# Rename parameters not tied to specific instruction
+- system.cpu.rename : rename
+Free IQ: (?<Free_IQ>\d*), Free ROB: (?<Free_ROB>\d*), Free LQ: (?<Free_LQ>\d*), Free SQ: (?<Free_SQ>\d*), FreeRM (?<Free_RM>(\d|\(|\)| )*)
+
+# Rename parameters tied to specific instruction
+- system.cpu.rename : rename
+Processing instruction \[sn:(?<sn_all>\d*)\] with PC
+Looking up [a-zA-Z]* arch reg (?<in_arch_reg>([a-zA-Z0-9]|\(|\)| )*), got phys reg (?<in_phys_reg>([a-zA-Z0-9]|\(|\)| )*)
+Renaming arch reg (?<out_arch_reg>([a-zA-Z0-9]|\(|\)| )*) to physical reg (?<out_phys_reg>([a-zA-Z0-9]|\(|\)| )*)
+
+
+- system.cpu.iew : issue
+
+
+# Dispatch parameters not tied to specific instruction
+- system.cpu.iew : dispatch
+IQ has (?<IQ_Free_Entries>\d*) free entries \(Can schedule: (?<IQ_Can_Schedule>\d*)\). *LQ has (?<LQ_Free_Entries>\d*) free entries. SQ has (?<SQ_Free_Entries>\d*) free entries.
+
+# Dispatch parameters tied to specific instruction
+- system.cpu.iew : dispatch
+# PC info seems redundant, but this gives us the sn_all
+\[tid:\d*\] Issue: Adding PC ([0-9a-zA-Z]|=|>|\(|\)|\.)* \[sn:(?<sn_all>\d*)\] \[tid:\d*\] to IQ.
+\[tid:\d*\] Issue: Squashed instruction encountered, not adding to IQ.(?<Squashed>)
+\[tid:\d*\] Issue: IQ has become full.(?<IQ_Full>)
+\[tid:\d*\] Issue: LQ has become full.(?<LQ_FULL>)
+\[tid:\d*\] Issue: SQ has become full.(?<SQ_FULL>)
+\[tid:\d*\] Issue: Memory instruction encountered, adding to LSQ.(?<Memory_Inst_Add_To_LSQ>)
+\[tid:\d*\] Issue: Nop instruction encountered, skipping.(?<Skipping_NOP>)
+\[tid:\d*\] Issue: Nonspeculative instruction encountered, skipping.(?<Skipping_Nonspeculative_Instruction>)
+
+
+
+
